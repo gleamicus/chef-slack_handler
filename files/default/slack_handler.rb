@@ -41,8 +41,36 @@ class Chef::Handler::Slack < Chef::Handler
   def report
     begin
       Timeout::timeout(@timeout) do
-        Chef::Log.debug("Sending report to Slack ##{config[:channel]}@#{team}.slack.com")
-        slack_message("Chef client run #{run_status_human_readable} on #{run_status.node.name}")
+        Chef::Log.debug("Sending report to Slack #{config[:channel]}@#{team}.slack.com")
+        message = "Chef run on #{run_status.node.name} #{run_status_human_readable}"
+        attachment = {}
+        attachment[:color] = run_status.success? ? "#458B00" : "#FF0000"
+        attachment[:fields] = []
+        attachment[:fields] << {
+          title: "Updated Resources",
+          value: run_status.updated_resources.length,
+          short: true
+        }
+        attachment[:fields] << {
+          title: "Total Resources",
+          value: run_status.all_resources.length,
+          short: true
+        }
+        unless run_status.success?
+          if run_status.updated_resources.length > 0
+            attachment[:fields] << {
+              title: "Updated Resources",
+              value: run_status.updated_resources.join("\n"),
+              short: false
+            }
+          end
+          attachment[:fields] << {
+            title: "Exception",
+            value: run_status.formatted_exception,
+            short: false
+          }
+        end
+        slack_message(message, attachment)
       end
     rescue Exception => e
       Chef::Log.debug("Failed to send message to Slack: #{e.message}")
@@ -51,13 +79,12 @@ class Chef::Handler::Slack < Chef::Handler
 
   private
 
-  def slack_message(content)
+  def slack_message(content, options = {})
     slack = Slackr::Webhook.new(team, api_key, config)
-    slack.say(content)
+    slack.say(content, options)
   end
 
   def run_status_human_readable
-    run_status.success? ? "succeeded" : "failed"
+    run_status.success? ? "succeeded." : "FAILED!"
   end
-
 end
