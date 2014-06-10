@@ -28,52 +28,55 @@ end
 require "timeout"
 
 class Chef::Handler::Slack < Chef::Handler
-  attr_reader :team, :api_key, :config, :timeout
+  attr_reader :team, :api_key, :config, :timeout, :fail_only
 
   def initialize(config = {})
     @config  = config.dup
     @team    = @config.delete(:team)
     @api_key = @config.delete(:api_key)
     @timeout = @config.delete(:timeout) || 15
+    @fail_only = @config.delete(:fail_only) || false
     @config.delete(:icon_emoji) if @config[:icon_url] && @config[:icon_emoji]
   end
 
   def report
-    begin
-      Timeout::timeout(@timeout) do
-        Chef::Log.debug("Sending report to Slack #{config[:channel]}@#{team}.slack.com")
-        message = "Chef run on #{run_status.node.name} #{run_status_human_readable}"
-        attachment = {}
-        attachment[:color] = run_status.success? ? "#458B00" : "#FF0000"
-        attachment[:fields] = []
-        attachment[:fields] << {
-          title: "Updated Resources",
-          value: run_status.updated_resources.length,
-          short: true
-        }
-        attachment[:fields] << {
-          title: "Total Resources",
-          value: run_status.all_resources.length,
-          short: true
-        }
-        unless run_status.success?
-          if run_status.updated_resources.length > 0
+    unless fail_only && run_status.success?
+      begin
+        Timeout::timeout(@timeout) do
+          Chef::Log.debug("Sending report to Slack #{config[:channel]}@#{team}.slack.com")
+          message = "Chef run on #{run_status.node.name} #{run_status_human_readable}"
+          attachment = {}
+          attachment[:color] = run_status.success? ? "#458B00" : "#FF0000"
+          attachment[:fields] = []
+          attachment[:fields] << {
+            title: "Updated Resources",
+            value: run_status.updated_resources.length,
+            short: true
+          }
+          attachment[:fields] << {
+            title: "Total Resources",
+            value: run_status.all_resources.length,
+            short: true
+          }
+          unless run_status.success?
+            if run_status.updated_resources.length > 0
+              attachment[:fields] << {
+                title: "Updated Resources",
+                value: run_status.updated_resources.join("\n"),
+                short: false
+              }
+            end
             attachment[:fields] << {
-              title: "Updated Resources",
-              value: run_status.updated_resources.join("\n"),
+              title: "Exception",
+              value: run_status.formatted_exception,
               short: false
             }
           end
-          attachment[:fields] << {
-            title: "Exception",
-            value: run_status.formatted_exception,
-            short: false
-          }
+          slack_message(message, attachment)
         end
-        slack_message(message, attachment)
+      rescue Exception => e
+        Chef::Log.debug("Failed to send message to Slack: #{e.message}")
       end
-    rescue Exception => e
-      Chef::Log.debug("Failed to send message to Slack: #{e.message}")
     end
   end
 
@@ -88,3 +91,4 @@ class Chef::Handler::Slack < Chef::Handler
     run_status.success? ? "succeeded." : "FAILED!"
   end
 end
+

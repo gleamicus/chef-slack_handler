@@ -25,3 +25,6 @@ default['chef_client']['handler']['slack']['username']   = nil
 default['chef_client']['handler']['slack']['icon_url']   = nil
 # OR
 default['chef_client']['handler']['slack']['icon_emoji'] = nil
+
+# Send to slack for both success and failure.
+default['chef_client']['handler']['slack']['fail_only'] = false
