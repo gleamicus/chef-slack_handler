@@ -1,0 +1,14 @@
+require 'rubygems'
+require '<%= File.join(@path, "slack_handler.rb") %>'
+
+slack = Chef::Handler::Slack.new({
+    team: "<%= @conf['team'] %>",
+    api_key: "<%= @conf['api_key'] %>",
+    channel: "<%= @conf['channel'] %>",
+    username: "<%= @conf['username'] %>",
+    icon_url: "<%= @conf['icon_url'] %>",
+    icon_emoji: "<%= @conf['icon_emoji'] %>",
+    fail_only: <%= @conf['fail_only'].to_s %>
+  })
+
+report_handlers << slack

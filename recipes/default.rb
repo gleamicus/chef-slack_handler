@@ -34,3 +34,8 @@ chef_handler "Chef::Handler::Slack" do
             ]
   action :nothing
 end.run_action(:enable)
+
+template '/etc/chef/client.d/slack_handler.rb' do
+  source 'chef-config-slack_handler.rb.erb'
+  variables path: node['chef_handler']['handler_path'], conf: node['chef_client']['handler']['slack']
+end
