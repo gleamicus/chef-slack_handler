@@ -1,5 +1,5 @@
 require 'rubygems'
-require '<%= File.join(@path, "slack_handler.rb") %>'
+require '<%= File.join(@path, "slack_handler") %>'
 
 slack = Chef::Handler::Slack.new({
     team: "<%= @conf['team'] %>",

@@ -42,6 +42,8 @@ class Chef::Handler::Slack < Chef::Handler
   def report
     unless fail_only && run_status.success?
       begin
+        updated_resources = run_status.updated_resources.nil? ? 0 : run_status.updated_resources.length
+        all_resources = run_status.all_resources.nil? ? 0 : run_status.all_resources.length
         Timeout::timeout(@timeout) do
           Chef::Log.debug("Sending report to Slack #{config[:channel]}@#{team}.slack.com")
           message = "Chef run on #{run_status.node.name} #{run_status_human_readable}"
@@ -50,12 +52,12 @@ class Chef::Handler::Slack < Chef::Handler
           attachment[:fields] = []
           attachment[:fields] << {
             title: "Updated Resources",
-            value: run_status.updated_resources.length,
+            value: updated_resources,
             short: true
           }
           attachment[:fields] << {
             title: "Total Resources",
-            value: run_status.all_resources.length,
+            value: all_resources,
             short: true
           }
           unless run_status.success?
